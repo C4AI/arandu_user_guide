@@ -28,6 +28,17 @@ Besides this guide, we also refer the user to these resources:
 - Ufscar's ncc: https://linktr.ee/ufscar.ncc
 
 
+## Other resources
+
+Besides this guide, we also refer the user to these resources:
+
+- Slurm tutorial: https://slurm.schedmd.com/tutorials.html
+- Slurm user guide: https://slurm.schedmd.com/quickstart.html
+- Docker tutorial: https://www.docker.com/101-tutorial/
+- Docker user guide: https://docs.docker.com/get-started/overview/
+- Ufscar's ncc: https://linktr.ee/ufscar.ncc
+
+
 # Accessing the machine
 
 The machines are located in a datacenter at ICMC-USP, all access is done remotely. The machines are behind a Firewall, thus a VPN must be used to connect to their network. Then, access is done via ssh.
@@ -60,11 +71,15 @@ Another way of accessing the cluster is using VSCode. You can add a remote conne
 Slurm is a workload manager 
 
 ## Job
+Slurm is a workload manager 
+
+## Job
 
 A Slurm Job is a unique task that will be sent from the master node to one of the workers, where it can be processed. Jobs can be divided into two categories: interective and batch.
 
 Interactive jobs are the ones the user can interactively send commands and see their outputs in real time. Batch, on the other hand, have a fixed list of commands that will be given to the worker node.
 
+## Queue
 ## Queue
 
 Slurm works with a queue system that distributes the available resources to users on request. In case more resources are requested than those available at a given moment, a queue will be formed and new jobs will be started as old ones finish.
@@ -106,6 +121,7 @@ will necessarely assign this job to the arandu partition, which is the DGX-A100.
 
 
 <!-- TO-DO: This requires the filesystem to be ready
+<!-- TO-DO: This requires the filesystem to be ready
 ## Create a batch job
 
 The ```sbatch``` command is used to create a batch job. It requires a file with arguments to be created. For example, create a file called ```myjob``` with the following content:
@@ -135,6 +151,7 @@ python3 helloworld.py
 
 ```
 -->
+-->
 ## Partitions
 
 Currently, the cluster has the following partitions:
@@ -143,6 +160,7 @@ Currently, the cluster has the following partitions:
 - devwork: These are workstations that are intended to be used for testing programs before submitting to the DGX-A100
 
 ## Other guides
+
 
 See https://slurm.schedmd.com/quickstart.html for more information on how to use slurm and how to manage jobs.
 
@@ -242,6 +260,7 @@ ENTRYPOINT ["python3", "helloworld.py"]
 
 This time, when the container starts, it will run the script and close.
 
+<!-- TO-DO: This requires the filesystem to be ready
 <!-- TO-DO: This requires the filesystem to be ready
 ## Volume creation
 
