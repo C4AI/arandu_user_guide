@@ -17,6 +17,17 @@ A cluster is a closely connected group of computers that are used to processes l
 
 The DGX-A100 is a computer system by NVIDIA for AI that contains 8 A100 GPUs, each with 80 GB of working memory. See https://www.nvidia.com/en-us/data-center/dgx-a100/
 
+## Other resources
+
+Besides this guide, we also refer the user to these resources:
+
+- Slurm tutorial: https://slurm.schedmd.com/tutorials.html
+- Slurm user guide: https://slurm.schedmd.com/quickstart.html
+- Docker tutorial: https://www.docker.com/101-tutorial/
+- Docker user guide: https://docs.docker.com/get-started/overview/
+- Ufscar's ncc: https://linktr.ee/ufscar.ncc
+
+
 # Accessing the machine
 
 The machines are located in a datacenter at ICMC-USP, all access is done remotely. The machines are behind a Firewall, thus a VPN must be used to connect to their network. Then, access is done via ssh.
@@ -46,13 +57,15 @@ Another way of accessing the cluster is using VSCode. You can add a remote conne
 
 ## What is Slurm?
 
-### Job
+Slurm is a workload manager 
+
+## Job
 
 A Slurm Job is a unique task that will be sent from the master node to one of the workers, where it can be processed. Jobs can be divided into two categories: interective and batch.
 
 Interactive jobs are the ones the user can interactively send commands and see their outputs in real time. Batch, on the other hand, have a fixed list of commands that will be given to the worker node.
 
-### Queue
+## Queue
 
 Slurm works with a queue system that distributes the available resources to users on request. In case more resources are requested than those available at a given moment, a queue will be formed and new jobs will be started as old ones finish.
 
@@ -92,9 +105,8 @@ srun -p arandu --pty -u bash -i
 will necessarely assign this job to the arandu partition, which is the DGX-A100.
 
 
+<!-- TO-DO: This requires the filesystem to be ready
 ## Create a batch job
-
-To-do: batch jobs require shared storage between the master and worker nodes to share data and results.
 
 The ```sbatch``` command is used to create a batch job. It requires a file with arguments to be created. For example, create a file called ```myjob``` with the following content:
 
@@ -122,7 +134,7 @@ The ```sbatch``` command is used to create a batch job. It requires a file with 
 python3 helloworld.py
 
 ```
-
+-->
 ## Partitions
 
 Currently, the cluster has the following partitions:
@@ -131,6 +143,7 @@ Currently, the cluster has the following partitions:
 - devwork: These are workstations that are intended to be used for testing programs before submitting to the DGX-A100
 
 ## Other guides
+
 See https://slurm.schedmd.com/quickstart.html for more information on how to use slurm and how to manage jobs.
 
 See https://slurm.schedmd.com/sbatch.html for the available options for batch jobs.
@@ -229,6 +242,88 @@ ENTRYPOINT ["python3", "helloworld.py"]
 
 This time, when the container starts, it will run the script and close.
 
+<!-- TO-DO: This requires the filesystem to be ready
 ## Volume creation
 
-## List of commands
+-->
+
+# Examples
+## Starting a Jupyter server in Arandu
+
+In this example, we will use Slurm to allocate a GPU in the DGX-A100 and start a Jupyter server in a Docker container
+
+### Connecting to the server
+
+After connecting to the VPN, open a terminal and type
+
+```
+ssh myuser@c4aiscm1
+```
+
+It will prompt your password, after that, you'll be connected to the master node of the cluster.
+
+Now, to request a GPU in the DGX-A100, type
+
+```
+srun -p arandu --gres=gpu:1 --pty -u bash -i
+```
+
+If a GPU is available, you will be connected to the dgx01 node. If not, you will be placed in the queue.
+
+To start a Docker container, type
+
+```
+sudo docker run --gpus 1 -p 8888:8888 --rm -it nvcr.io/nvidia/pytorch:22.11-py3
+```
+
+The ```-p 8888:8888``` argument maps the 8888 network port in the container to the dgx01's 8888 port, which is used for Jupyter.
+
+The Docker container will open, to start the Jupyter server, type
+
+```
+jupyter notebook --allow-root --ip=0.0.0.0 --port=8888 --no-browser &
+```
+
+The output will look like this:
+
+```
+root@1632efb76d1d:/workspace# [I 15:00:20.897 NotebookApp] JupyterLab extension loaded from /usr/local/lib/python3.5/dist-packages/jupyterlab
+[I 15:00:20.897 NotebookApp] JupyterLab application directory is /usr/local/share/jupyter/lab
+[I 15:00:20.898 NotebookApp] Serving notebooks from local directory: /workspace
+[I 15:00:20.898 NotebookApp] The Jupyter Notebook is running at:
+[I 15:00:20.898 NotebookApp] http://(1632efb76d1d or 127.0.0.1):8888/?token=fbf41b0ae5465f6435d67137983ee13a9df66e52268ba1d6
+[I 15:00:20.898 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[C 15:00:20.901 NotebookApp]
+
+    To access the notebook, open this file in a browser:
+        file:///root/.local/share/jupyter/runtime/nbserver-67-open.html
+    Or copy and paste one of these URLs:
+        http://(1632efb76d1d or 127.0.0.1):8888/?token=fbf41b0ae5465f6435d67137983ee13a9df66e52268ba1d6
+```
+
+Notice the last line in the output, it contains the token for accessing the notebook, in this case: ```fbf41b0ae5465f6435d67137983ee13a9df66e52268ba1d6```
+
+Finally, on your computer, open a web browser and access (replace ```[TOKEN]``` by your token from the previous command).
+
+```
+dgx01:8888/?token=[TOKEN]
+```
+
+To simplify the exacution, all commands can be chained in a bash script. To do this, create a new file called ```startjupyter.sh``` with the following contents
+
+```
+#!/bin/bash
+srun -p arandu --pty -u docker run --gpus 1 -p 8888:8888 --rm -it nvcr.io/nvidia/pytorch:22.11-py3 -c jupyter notebook --allow-root --ip=0.0.0.0 --port=8888 --no-browser
+```
+
+To make it an executable, run
+
+```
+chmod 755 startjupyter.sh
+```
+
+Finally, to start the server, run
+
+```
+./startjupyter.sh
+```
