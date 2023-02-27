@@ -25,28 +25,17 @@ Besides this guide, we also refer the user to these resources:
 - Slurm user guide: https://slurm.schedmd.com/quickstart.html
 - Docker tutorial: https://www.docker.com/101-tutorial/
 - Docker user guide: https://docs.docker.com/get-started/overview/
-- Ufscar's ncc: https://linktr.ee/ufscar.ncc
-
-
-## Other resources
-
-Besides this guide, we also refer the user to these resources:
-
-- Slurm tutorial: https://slurm.schedmd.com/tutorials.html
-- Slurm user guide: https://slurm.schedmd.com/quickstart.html
-- Docker tutorial: https://www.docker.com/101-tutorial/
-- Docker user guide: https://docs.docker.com/get-started/overview/
-- Ufscar's ncc: https://linktr.ee/ufscar.ncc
-
+- Ufscar's NCC: https://linktr.ee/ufscar.ncc
 
 # Accessing the machine
 
-The machines are located in a datacenter at ICMC-USP, all access is done remotely. The machines are behind a Firewall, thus a VPN must be used to connect to their network. Then, access is done via ssh.
+The machines are located in a datacenter at ICMC-USP, all access is done remotely. The machines are behind a Firewall; thus a VPN must be used to connect to their network. Then, access is done via ssh.
 
+<!--To-do: link to the pdf guide
 ## VPN Access
 
-To-do: link to the pdf guide
 See the guide in:
+-->
 
 ## Access by ssh
 
@@ -68,23 +57,19 @@ Another way of accessing the cluster is using VSCode. You can add a remote conne
 
 ## What is Slurm?
 
-Slurm is a workload manager 
-
-## Job
-Slurm is a workload manager 
+Slurm is a workload manager. 
 
 ## Job
 
-A Slurm Job is a unique task that will be sent from the master node to one of the workers, where it can be processed. Jobs can be divided into two categories: interective and batch.
+A Slurm Job is a unique task that will be sent from the master node to one of the workers, where it can be processed. Jobs can be divided into two categories: interactive and batch.
 
-Interactive jobs are the ones the user can interactively send commands and see their outputs in real time. Batch, on the other hand, have a fixed list of commands that will be given to the worker node.
+Interactive jobs are the ones the user can interactively send commands and see their outputs in real time. Batch jobs, on the other hand, have a fixed list of commands that will be given to the worker node.
 
 ## Queue
-## Queue
 
-Slurm works with a queue system that distributes the available resources to users on request. In case more resources are requested than those available at a given moment, a queue will be formed and new jobs will be started as old ones finish.
+Slurm works with a queue system that distributes the available resources to users on request. In case more resources are requested than those available at a given moment, a queue will be formed, and new jobs will be started as old ones finish.
 
-## Create an interactive a job
+## Create an interactive job
 
 To start up an interactive job:
 
@@ -94,7 +79,7 @@ srun --pty -u bash -i
 
 Press ```Ctrl+D``` or type exit to quit the interactive job.
 
-This command starts a bash session in one of the available nodes. In case all nodes are busy, slurm will add this job to the queue.
+This command starts a bash session in one of the available nodes. In case all nodes are busy, Slurm will add this job to the queue.
 
 Notice in the example below that the host machine changes from the master node ```c4aiscm1``` to the worker ```c4aiscw2```.
 
@@ -117,10 +102,8 @@ The cluster is formed of different partitions, each with certain characteristics
 srun -p arandu --pty -u bash -i
 ```
 
-will necessarely assign this job to the arandu partition, which is the DGX-A100.
+will necessarily assign this job to the arandu partition, which is the DGX-A100.
 
-
-<!-- TO-DO: This requires the filesystem to be ready
 <!-- TO-DO: This requires the filesystem to be ready
 ## Create a batch job
 
@@ -143,7 +126,7 @@ The ```sbatch``` command is used to create a batch job. It requires a file with 
 #SBATCH --gres=gpu:1 # GPUs requested
 #SBATCH --partition=arandu # Node type
 
-# Set the slurm output folder
+# Set the Slurm output folder
 #SBATCH --output=/users/myuser/myjob.txt
 
 # Commands to run the job
@@ -151,7 +134,7 @@ python3 helloworld.py
 
 ```
 -->
--->
+
 ## Partitions
 
 Currently, the cluster has the following partitions:
@@ -161,23 +144,21 @@ Currently, the cluster has the following partitions:
 
 ## Other guides
 
-
-See https://slurm.schedmd.com/quickstart.html for more information on how to use slurm and how to manage jobs.
+See https://slurm.schedmd.com/quickstart.html for more information on how to use Slurm and how to manage jobs.
 
 See https://slurm.schedmd.com/sbatch.html for the available options for batch jobs.
-
 
 # Docker
 
 ## What is Docker?
 
-Docker is a container execution system. A container can be thought of as a self-contained system that brings everything an application needs to run. The advantage of "containerizing" an application is that it can run on different computers without having to reinstall all dependencies in their correct versions, as they are already included in the container.
+Docker is a container execution system. A container can be thought of as a self-contained system that brings everything an application needs to run. The advantage of "containerizing" an application is that it can run on different computers without having to reinstall all dependencies in their correct versions, as they are already included in the container. Similarly, a single computer can provide distinct environments for different tasks.
 
 Three concepts are essential to using Docker: "Image", "Container", and "Volume". They will be defined below.
 
 ### Image
 
-An image is a package that contains everything it takes to run the application. The application itself and and all its dependencies in its correct versions are contained in the image.
+An image is a package that contains everything it takes to run the application. The application itself and all its dependencies in its correct versions are contained in the image.
 
 Docker operates with an image layering system. In this way, a new image can be defined as a previous image added to the new elements.
 
@@ -209,7 +190,7 @@ To end the image, press ``Ctrl+D``.
 
 This container environment brings several pre-installed tools for machine learning. This, in particular, has PyTorch preinstalled, but there are versions with other toolkits, such as Tensorflow.
 
-There is a catalog of these images on the https://docs.nvidia.com/deeplearning/frameworks/support-matrix/index.html. Note that the number at the end of the name indicates the version, which in this case is given by the year and month of its creation.
+There is a catalog of these images on https://docs.nvidia.com/deeplearning/frameworks/support-matrix/index.html. Note that the number at the end of the name indicates the version, which in this case is given by the year and month of its creation.
 
 ### Creating an image
 
@@ -221,16 +202,16 @@ In our example, we have a simple Python file that writes "Hello world" on the sc
 print("Hello world")
 ```
 
-Let's create the ``Dockerfile`` that will make an image from this file. The file name should be ` `Dockerfile`` and its contents, in this example, is:
+Let's create the ``Dockerfile`` that will make an image from this file. The file name should be ` `Dockerfile`` and its contents; in this example, it is:
 
 ```
 FROM nvcr.io/nvidia/pytorch:22.11-py3
-COPY. .
+COPY . .
 ```
 
 The first line, with the keyword ``FROM``, selects an image to use as a base. In our case, we will use the image ``nvcr.io/nvidia/pytorch:22.11-py3``.
 
-The second line, with the keyword ``COPY``, makes a copy of the files from the current directory into the image. In our example, the only copied file is the ``helloworld.py``.
+The second line, with the keyword ``COPY``, makes a copy of the files from the current directory into the image. In our example, the only copied file is ``helloworld.py``.
 
 Finally, to create the image, we use the command:
 
@@ -261,9 +242,7 @@ ENTRYPOINT ["python3", "helloworld.py"]
 This time, when the container starts, it will run the script and close.
 
 <!-- TO-DO: This requires the filesystem to be ready
-<!-- TO-DO: This requires the filesystem to be ready
 ## Volume creation
-
 -->
 
 # Examples
