@@ -27,7 +27,7 @@ Besides this guide, we also refer the user to these resources:
 - Docker user guide: https://docs.docker.com/get-started/overview/
 - Ufscar's NCC: https://linktr.ee/ufscar.ncc
 
-# Accessing the machine
+# Using the machine
 
 The machines are located in a datacenter at ICMC-USP, all access is done remotely. The machines are behind a Firewall; thus a VPN must be used to connect to their network. Then, access is done via ssh.
 
@@ -52,6 +52,16 @@ ssh myuser@c4aiscm1
 Another way of accessing the cluster is using VSCode. You can add a remote connection and work in remote computers as if they were local. To do so, click in the Remote Explorer button in the sidebar, and add a new remote via ssh.
 
 ![Remote connections in VSCode](images/VSCode_remote.png)
+
+## File systems
+
+There are two places users can store their files in the cluster, the home folder and the output folder.
+
+Each user's home folder is located at ```/home/[username]```. This folder is shared across all nodes in the cluster, therefore files placed there will be accessible from anywhere. However, network transfer speeds are limited, so it's not recomended to run programs directly from this folder, as it may impact the performance for all users in the cluster.
+
+The output folder is local to each worker node, and is located at ```/output/[username]```. We recomend placing all files pertinent to a job in this folder before processing.
+
+The recomended way to do so is by transfering files from the home folder to the output folder at the begining of a job and, then, transfering the results back when the job finishes. We will cover this in the next session.
 
 # Slurm
 
@@ -104,36 +114,45 @@ srun -p arandu --pty -u bash -i
 
 will necessarily assign this job to the arandu partition, which is the DGX-A100.
 
-<!-- TO-DO: This requires the filesystem to be ready
 ## Create a batch job
 
 The ```sbatch``` command is used to create a batch job. It requires a file with arguments to be created. For example, create a file called ```myjob``` with the following content:
 
 ```
-#!/bin/bash —l
+#!/bin/bash -l
 
-# Choose working directory
-#SBATCH -D /mnt/data1/users/myuser/project
+# Set the slurm output file, this is where all command line output is redirected to. %j is replaced by the job id
+#SBATCH --output=slurm_out_%j.txt
 
-# Use the current environment for this job, which is the default setting
-#SBATCH --export=ALL
+# Define computational resources. This job requests 8 CPUs and 1 GPU in a single node.
+#SBATCH -n 8 # Cores
+#SBATCH -N 1 # Number of nodes
+#SBATCH --gres=gpu:1
 
-# Set the maximum run time
-#SBATCH -t 0-12:00:00 # days-hours:min:sec
+# Sepecify the partition (arandu for the DGX-A100 and devwork for the workstations)
+#SBATCH -p arandu
 
-# Set the computational resources requested
-#SBATCH -n 36 # Cores
-#SBATCH --gres=gpu:1 # GPUs requested
-#SBATCH --partition=arandu # Node type
+# Print the name of the worker node to the output file
+echo "Running on"
+hostname
 
-# Set the Slurm output folder
-#SBATCH --output=/users/myuser/myjob.txt
+# Copy files from the home folder to the output folder
+cp -R /home/[myuser]/[myproject] /output/[myuser]/
 
-# Commands to run the job
-python3 helloworld.py
+# Call Docker and run the code
+docker run --rm -v /output/[myuser]/[myproject]:/workspace/data nvcr.io/nvidia/pytorch:22.11-py3 -w /workspace/data python3 code/main.py
+
+# Move the results to the home folder
+mv /output/[myuser]/[myproject]/results/* /home/[myuser]/[myproject]/results/
+
+# Clean the output folder
+rm -r /output/[myuser]/[myproject]
+
+echo "Done"
 
 ```
--->
+
+This code will run the python code in ```/home/[myuser]/[myproject]/code/main.py```. The results of this program should be saved to a ```results``` folder, which will be copied back to the home folder. Notice that we use the ```nvcr.io/nvidia/pytorch:22.11-py3``` Docker image, which was prepared for PyTorch, but other images can be used, as specified in the ```Docker``` session of this document.
 
 ## Partitions
 
@@ -241,9 +260,19 @@ ENTRYPOINT ["python3", "helloworld.py"]
 
 This time, when the container starts, it will run the script and close.
 
-<!-- TO-DO: This requires the filesystem to be ready
-## Volume creation
--->
+## Volumes
+
+A Docker container runs in a filesystem that is separate to that of the host machine. To exchange files between the container and the host, a volume can be used. It links a directory in the container to one in the host.
+
+In the Slurm example above, we have used the flag
+
+```
+-v /output/[myuser]/[myproject]:/workspace/data
+```
+
+This flag links the ```/output/[myuser]/[myproject]``` folder in the host to the ```/workspace/data``` folder in the container.
+
+```/workspace``` is the default folder the Docker conatiner opens in. In our example, this was chanegd by the ```-w /workspace/data``` flag.
 
 # Examples
 ## Starting a Jupyter server in Arandu
@@ -325,3 +354,116 @@ Finally, to start the server, run
 ```
 ./startjupyter.sh
 ```
+
+## Training a neural network as a background job
+
+First, connect to the master node, as was done in the previous example.
+
+Create a folder called ```background_job```, which contains two directories: ```code``` and ```models```.
+
+In the ```code``` directory, create a python file called ```main.py``` with the following content:
+
+This example was addapted from: https://pytorch.org/tutorials/beginner/pytorch_with_examples.html
+
+```
+import torch
+import math
+
+
+# Create Tensors to hold input and outputs.
+x = torch.linspace(-math.pi, math.pi, 2000)
+y = torch.sin(x)
+
+# Prepare the input tensor (x, x^2, x^3).
+p = torch.tensor([1, 2, 3])
+xx = x.unsqueeze(-1).pow(p)
+
+# Use the nn package to define our model and loss function.
+model = torch.nn.Sequential(
+    torch.nn.Linear(3, 1),
+    torch.nn.Flatten(0, 1)
+)
+loss_fn = torch.nn.MSELoss(reduction='sum')
+
+# Use the optim package to define an Optimizer that will update the weights of
+# the model for us. Here we will use RMSprop; the optim package contains many other
+# optimization algorithms. The first argument to the RMSprop constructor tells the
+# optimizer which Tensors it should update.
+learning_rate = 1e-3
+optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
+for t in range(2000):
+    # Forward pass: compute predicted y by passing x to the model.
+    y_pred = model(xx)
+
+    # Compute and print loss.
+    loss = loss_fn(y_pred, y)
+    if t % 100 == 99:
+        print(t, loss.item())
+
+    # Before the backward pass, use the optimizer object to zero all of the
+    # gradients for the variables it will update (which are the learnable
+    # weights of the model). This is because by default, gradients are
+    # accumulated in buffers( i.e, not overwritten) whenever .backward()
+    # is called. Checkout docs of torch.autograd.backward for more details.
+    optimizer.zero_grad()
+
+    # Backward pass: compute gradient of the loss with respect to model
+    # parameters
+    loss.backward()
+
+    # Calling the step function on an Optimizer makes an update to its
+    # parameters
+    optimizer.step()
+
+
+linear_layer = model[0]
+print(f'Result: y = {linear_layer.bias.item()} + {linear_layer.weight[:, 0].item()} x + {linear_layer.weight[:, 1].item()} x^2 + {linear_layer.weight[:, 2].item()} x^3')
+
+torch.save(model, 'models/trained_model.pt')
+```
+
+Running this code trains a simple neural network to approximate a sine function. For the sake of simplicity, we do not use the GPU in this example.
+
+Now, create a file called ```train_model``` in the ```background_job``` folder with the follwoing content:
+
+```
+#!/bin/bash -l
+
+# Set the slurm output file, this is where all command line output is redirected to. %j is replaced by the job id
+#SBATCH --output=slurm_out_%j.txt
+
+# Define computational resources. This job requests 8 CPUs and 1 GPU in a single node.
+#SBATCH -n 8 # Cores
+#SBATCH -N 1 # Number of nodes
+#SBATCH --gres=gpu:1
+
+# Sepecify the partition (arandu for the DGX-A100 and devwork for the workstations)
+#SBATCH -p devwork
+
+# Print the name of the worker node to the output file
+echo "Running on"
+hostname
+
+# Copy files from the home folder to the output folder
+cp -R /home/[myuser]/background_job /output/[myuser]/
+
+# Call Docker and run the code
+docker run --rm -v /output/[myuser]/background_job:/workspace/data nvcr.io/nvidia/pytorch:22.11-py3 -w /workspace/data python3 code/main.py
+
+# Move the results to the home folder
+mv /output/[myuser]/background_job/results/* /home/[myuser]/background_job/results/
+
+# Clean the output folder
+rm -r /output/[myuser]/background_job
+
+echo "Done"
+
+```
+
+Now, call Slurm in batch mode using this file.
+
+```
+sbatch train_model
+```
+
+If all goes well, Slurm will place this job in the queue for one of the workstations and run it when there are resources available. The job's output can be monitored in the ```slurm_out_%j.txt``` file. The ```squeue``` command can be used to check the job's status before it is finished.
