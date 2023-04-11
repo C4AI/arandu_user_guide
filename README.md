@@ -463,7 +463,7 @@ hostname
 cp -R /home/[myuser]/background_job /output/[myuser]/
 
 # Call Docker and run the code
-docker run --rm -v /output/[myuser]/background_job:/workspace/data -w /workspace/data nvcr.io/nvidia/pytorch:22.11-py3 \
+docker run --rm --gpus \"device=$CUDA_VISIBLE_DEVICES\" -v /output/[myuser]/background_job:/workspace/data -w /workspace/data nvcr.io/nvidia/pytorch:22.11-py3 \
  python3 code/main.py
 
 # Move the results to the home folder
