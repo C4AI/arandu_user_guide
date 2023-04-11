@@ -1,17 +1,20 @@
 # Arandu User Guide
 
-In this guide, we will provide some examples on how to use C4AI's cluster. It is divided in four parts:
+In this guide, we will provide some examples on how to use C4AI's cluster, Arandu. It is divided in five parts:
 
 - This introduction, which brings an overview of the machine
 - Accessing the machine
 - Using the Slurm workload manager
 - Using the Docker container system
+- Examples
 
 All three parts must be used in conjunction for the correct use of the cluster.
 
 ## What is a computer cluster
 
 A cluster is a closely connected group of computers that are used to processes large tasks. Each of these individual computers is called a node. Most of the cluster is constituted by "worker" nodes, which are the ones that actually process the tasks. There is also a "master node", or "login node", which acts as the head of the cluster, it receives tasks from users and passes them to the worker nodes depending on their availability.
+
+Arandu has a DGX-A100 as its main processing node, four workstations as auxiliary processing nodes and one master node.
 
 ## What is the DGX-A100
 
@@ -26,6 +29,11 @@ Besides this guide, we also refer the user to these resources:
 - Docker tutorial: https://www.docker.com/101-tutorial/
 - Docker user guide: https://docs.docker.com/get-started/overview/
 - Ufscar's NCC: https://linktr.ee/ufscar.ncc
+
+Feel free to contact the cluster's management team in case of doubts or any other issues.
+
+<!--To-do: add links for contact
+-->
 
 # Using the machine
 
@@ -57,17 +65,17 @@ Another way of accessing the cluster is using VSCode. You can add a remote conne
 
 There are two places users can store their files in the cluster, the home folder and the output folder.
 
-Each user's home folder is located at ```/home/[username]```. This folder is shared across all nodes in the cluster, therefore files placed there will be accessible from anywhere. However, network transfer speeds are limited, so it's not recomended to run programs directly from this folder, as it may impact the performance for all users in the cluster.
+Each user's home folder is located at ```/home/[username]```. This folder is shared across all nodes in the cluster, therefore files placed there will be accessible from anywhere. However, network transfer speeds are limited, so it's not recommended running programs directly from this folder, as it may impact the performance for all users in the cluster.
 
-The output folder is local to each worker node, and is located at ```/output/[username]```. We recomend placing all files pertinent to a job in this folder before processing.
+The output folder is local to each worker node, and is located at ```/output/[username]```. We recommend placing all files pertinent to a job in this folder before processing.
 
-The recomended way to do so is by transfering files from the home folder to the output folder at the begining of a job and, then, transfering the results back when the job finishes. We will cover this in the next session.
+The recommended way to do so is by transferring files from the home folder to the output folder at the beginning of a job and, then, transferring the results back when the job finishes. We will cover this in the next session.
 
 # Slurm
 
 ## What is Slurm?
 
-Slurm is a workload manager. 
+Slurm is a workload manager. It allows the computational resources available in the cluster to be shared fairly among users. If users require more computational resources than those that are promptly available, Slurm manages a queue of jobs that are started as earlier jobs finish and resources become available.
 
 ## Job
 
@@ -191,31 +199,37 @@ The volume is a mechanism for storing and exchanging data from a container. File
 
 ## Image, container, and volume management
 
-The Docker system is already installed on the machine. To use it, you need the command: ``docker`` and its arguments. In this guide, we`ll create a simple example that will use the concepts of image, container, and volume.
+The Docker system is already installed on the machine. To use it, you need the command: ``docker`` and its arguments. In this guide, we will create a simple example that will use the concepts of image, container, and volume.
 
 ## Starting a container
 
-To start a container from an image, you use the \textttdocker run command, for example:
+To start a container from an image, you use the ```docker``` run command, for example:
 
 ```
 docker run -it --rm nvcr.io/nvidia/pytorch:22.11-py3
 ```
 
-In this case, we use three different flags: ``i``, ``t``, and ``rm``. The first two are commonly used together. ``i`` means ``interactive`` and ``t``, ``tty``. The two together make the container run interactively and with a terminal. The ``rm`` flag indicates that the container should be deleted at the end of execution. In many cases, this is a good practice to prevent the accumulation of unused containers.
+In this case, we use four different flags: ``i``, ``t`` and ``rm``. The first two are commonly used together. ``i`` means ``interactive`` and ``t``, ``tty``. The two together make the container run interactively and with a terminal. The ``rm`` flag indicates that the container should be deleted at the end of execution. In many cases, this is a good practice to prevent the accumulation of unused containers.
 
 When using this command, a container is created from the ``nvcr.io/nvidia/pytorch:22.11-py3`` image and opened. At this point, the command line will be connected to the container. The terminal will be in the workspace folder. Use the ``ls`` command to explore the contents of the folder. This image is developed by NVIDIA especially for systems such as the DGX-A100, note that the folder already contains some examples and usage guides.
 
 To end the image, press ``Ctrl+D``.
 
-This container environment brings several pre-installed tools for machine learning. This, in particular, has PyTorch preinstalled, but there are versions with other toolkits, such as Tensorflow.
+This container environment brings several pre-installed tools for machine learning. This, in particular, has PyTorch pre-installed, but there are versions with other toolkits, such as Tensorflow.
 
 There is a catalog of these images on https://docs.nvidia.com/deeplearning/frameworks/support-matrix/index.html. Note that the number at the end of the name indicates the version, which in this case is given by the year and month of its creation.
+
+Note that this example container will have no access to the host's GPUs. For this, we must use the ``gpus`` flag. For instance, if we use ``--gpus 2``, the container will have access to two GPUs. However, these GPUs may not be those designated by Slurm to our job, which may cause conflicts with jobs by other users. To correctly assign GPUs to a container, the command should be ``--gpus \"device=$CUDA_VISIBLE_DEVICES\"``. Therefore, in the above example, the command becomes
+
+```
+docker run -it --rm --gpus \"device=$CUDA_VISIBLE_DEVICES\" nvcr.io/nvidia/pytorch:22.11-py3
+```
 
 ### Creating an image
 
 You can create new images for Docker based on existing images. An image is generated from a Dockerfile file located in the same directory as the main application.
 
-In our example, we have a simple Python file that writes "Hello world" on the screen. The name of this file is ``helloworld.py`` and we want to create an image to run this code.
+In our example, we have a simple Python file that writes "Hello world" on the screen. The name of this file is ``helloworld.py``, and we want to create an image to run this code.
 
 ```
 print("Hello world")
@@ -235,7 +249,7 @@ The second line, with the keyword ``COPY``, makes a copy of the files from the c
 Finally, to create the image, we use the command:
 
 ```
-docker build. -t hello
+docker build . -t hello
 ```
 
 The ``-t`` key defines the name given to the image. Note that on some systems, such as Arandu, Docker runs as root, so images are shared among users.
@@ -260,9 +274,9 @@ ENTRYPOINT ["python3", "helloworld.py"]
 
 This time, when the container starts, it will run the script and close.
 
-## Volumes
+## Using volumes
 
-A Docker container runs in a filesystem that is separate to that of the host machine. To exchange files between the container and the host, a volume can be used. It links a directory in the container to one in the host.
+A Docker container runs in a file system that is separate to that of the host machine. To exchange files between the container and the host, a volume can be used. It links a directory in the container to one in the host.
 
 In the Slurm example above, we have used the flag
 
@@ -272,7 +286,7 @@ In the Slurm example above, we have used the flag
 
 This flag links the ```/output/[myuser]/[myproject]``` folder in the host to the ```/workspace/data``` folder in the container.
 
-```/workspace``` is the default folder the Docker conatiner opens in. In our example, this was chanegd by the ```-w /workspace/data``` flag.
+```/workspace``` is the default folder the Docker container opens in. In our example, this was changed by the ```-w /workspace/data``` flag.
 
 # Examples
 ## Starting a Jupyter server in Arandu
@@ -300,7 +314,7 @@ If a GPU is available, you will be connected to the dgx01 node. If not, you will
 To start a Docker container, type
 
 ```
-sudo docker run --gpus 1 -p 8888:8888 --rm -it nvcr.io/nvidia/pytorch:22.11-py3
+sudo docker run --gpus \"device=$CUDA_VISIBLE_DEVICES\" -p 8888:8888 --rm -it nvcr.io/nvidia/pytorch:22.11-py3
 ```
 
 The ```-p 8888:8888``` argument maps the 8888 network port in the container to the dgx01's 8888 port, which is used for Jupyter.
@@ -308,7 +322,7 @@ The ```-p 8888:8888``` argument maps the 8888 network port in the container to t
 The Docker container will open, to start the Jupyter server, type
 
 ```
-jupyter notebook --allow-root --ip=0.0.0.0 --port=8888 --no-browser &
+jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser &
 ```
 
 The output will look like this:
@@ -340,7 +354,7 @@ To simplify the execution, all commands can be chained in a bash script. To do t
 
 ```
 #!/bin/bash
-srun -p arandu --pty -u docker run --gpus 1 -p 8888:8888 --rm -it nvcr.io/nvidia/pytorch:22.11-py3 -c jupyter notebook --allow-root --ip=0.0.0.0 --port=8888 --no-browser
+srun -p arandu --pty -u docker run --gpus \"device=$CUDA_VISIBLE_DEVICES\" -p 8888:8888 --rm -it nvcr.io/nvidia/pytorch:22.11-py3 -c jupyter notebook --allow-root --ip=0.0.0.0 --port=8888 --no-browser
 ```
 
 To make it an executable, run
@@ -363,7 +377,8 @@ Create a folder called ```background_job```, which contains two directories: ```
 
 In the ```code``` directory, create a python file called ```main.py``` with the following content:
 
-This example was addapted from: https://pytorch.org/tutorials/beginner/pytorch_with_examples.html
+This example was adapted from: https://pytorch.org/tutorials/beginner/pytorch_with_examples.html
+
 
 ```
 import torch
@@ -424,7 +439,7 @@ torch.save(model, 'models/trained_model.pt')
 
 Running this code trains a simple neural network to approximate a sine function. For the sake of simplicity, we do not use the GPU in this example.
 
-Now, create a file called ```train_model``` in the ```background_job``` folder with the follwoing content:
+Now, create a file called ```train_model``` in the ```background_job``` folder with the following content:
 
 ```
 #!/bin/bash -l
@@ -448,7 +463,8 @@ hostname
 cp -R /home/[myuser]/background_job /output/[myuser]/
 
 # Call Docker and run the code
-docker run --rm -v /output/[myuser]/background_job:/workspace/data nvcr.io/nvidia/pytorch:22.11-py3 -w /workspace/data python3 code/main.py
+docker run --rm -v /output/[myuser]/background_job:/workspace/data -w /workspace/data nvcr.io/nvidia/pytorch:22.11-py3 \
+ python3 code/main.py
 
 # Move the results to the home folder
 mv /output/[myuser]/background_job/results/* /home/[myuser]/background_job/results/
