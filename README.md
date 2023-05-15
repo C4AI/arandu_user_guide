@@ -71,6 +71,8 @@ The output folder is local to each worker node, and is located at ```/output/[us
 
 The recommended way to do so is by transferring files from the home folder to the output folder at the beginning of a job and, then, transferring the results back when the job finishes. We will cover this in the next session.
 
+**TEMPORARY NOTE**: As of today, Arandu's storage system is not yet installed, therefore storage space is scarce, especially in the home partition. Therefore, as a **temporary solution**, results are to be stored in each node's ```/output``` folder. We will notify users when this issue is resolved.
+
 # Slurm
 
 ## What is Slurm?
@@ -148,10 +150,10 @@ hostname
 cp -R /home/[myuser]/[myproject] /output/[myuser]/
 
 # Call Docker and run the code
-docker run --rm -v /output/[myuser]/[myproject]:/workspace/data nvcr.io/nvidia/pytorch:22.11-py3 -w /workspace/data python3 code/main.py
+docker run --user "$(id -u):$(id -g)" --rm -v /output/[myuser]/[myproject]:/workspace/data nvcr.io/nvidia/pytorch:22.11-py3 -w /workspace/data python3 code/main.py
 
-# Move the results to the home folder
-mv /output/[myuser]/[myproject]/results/* /home/[myuser]/[myproject]/results/
+# Move the results to the home folder (Temporarily disabled)
+# mv /output/[myuser]/[myproject]/results/* /home/[myuser]/[myproject]/results/
 
 # Clean the output folder
 rm -r /output/[myuser]/[myproject]
@@ -219,10 +221,14 @@ This container environment brings several pre-installed tools for machine learni
 
 There is a catalog of these images on https://docs.nvidia.com/deeplearning/frameworks/support-matrix/index.html. Note that the number at the end of the name indicates the version, which in this case is given by the year and month of its creation.
 
-Note that this example container will have no access to the host's GPUs. For this, we must use the ``gpus`` flag. For instance, if we use ``--gpus 2``, the container will have access to two GPUs. However, these GPUs may not be those designated by Slurm to our job, which may cause conflicts with jobs by other users. To correctly assign GPUs to a container, the command should be ``--gpus \"device=$CUDA_VISIBLE_DEVICES\"``. Therefore, in the above example, the command becomes
+Note that this example container will have no access to the host's GPUs. For this, we must use the ``gpus`` flag. For instance, if we use ``--gpus 2``, the container will have access to two GPUs. However, these GPUs may not be those designated by Slurm to our job, which may cause conflicts with jobs by other users. To correctly assign GPUs to a container, the command should be ``--gpus \"device=$CUDA_VISIBLE_DEVICES\"``.
+
+Docker's default setting is to run as root in the host machine, this causes all files created by it to be owned by root, therefore read-only for other users. This can be fixed by specifying the correct user and group IDs when starting up a container with the flag: ```--user "$(id -u):$(id -g)"```
+
+Therefore, in the above example, the command becomes
 
 ```
-docker run -it --rm --gpus \"device=$CUDA_VISIBLE_DEVICES\" nvcr.io/nvidia/pytorch:22.11-py3
+docker run --user "$(id -u):$(id -g)" -it --rm --gpus \"device=$CUDA_VISIBLE_DEVICES\" nvcr.io/nvidia/pytorch:22.11-py3
 ```
 
 ### Creating an image
@@ -314,7 +320,7 @@ If a GPU is available, you will be connected to the dgx01 node. If not, you will
 To start a Docker container, type
 
 ```
-sudo docker run --gpus \"device=$CUDA_VISIBLE_DEVICES\" -p 8888:8888 --rm -it nvcr.io/nvidia/pytorch:22.11-py3
+sudo docker run --user "$(id -u):$(id -g)" --gpus \"device=$CUDA_VISIBLE_DEVICES\" -p 8888:8888 --rm -it nvcr.io/nvidia/pytorch:22.11-py3
 ```
 
 The ```-p 8888:8888``` argument maps the 8888 network port in the container to the dgx01's 8888 port, which is used for Jupyter.
@@ -354,7 +360,7 @@ To simplify the execution, all commands can be chained in a bash script. To do t
 
 ```
 #!/bin/bash
-srun -p arandu --pty -u docker run --gpus \"device=$CUDA_VISIBLE_DEVICES\" -p 8888:8888 --rm -it nvcr.io/nvidia/pytorch:22.11-py3 -c jupyter notebook --allow-root --ip=0.0.0.0 --port=8888 --no-browser
+srun -p arandu --pty -u docker run --user "$(id -u):$(id -g)" --gpus \"device=$CUDA_VISIBLE_DEVICES\" -p 8888:8888 --rm -it nvcr.io/nvidia/pytorch:22.11-py3 -c jupyter notebook --allow-root --ip=0.0.0.0 --port=8888 --no-browser
 ```
 
 To make it an executable, run
@@ -463,11 +469,11 @@ hostname
 cp -R /home/[myuser]/background_job /output/[myuser]/
 
 # Call Docker and run the code
-docker run --rm --gpus \"device=$CUDA_VISIBLE_DEVICES\" -v /output/[myuser]/background_job:/workspace/data -w /workspace/data nvcr.io/nvidia/pytorch:22.11-py3 \
+docker run --user "$(id -u):$(id -g)" --rm --gpus \"device=$CUDA_VISIBLE_DEVICES\" -v /output/[myuser]/background_job:/workspace/data -w /workspace/data nvcr.io/nvidia/pytorch:22.11-py3 \
  python3 code/main.py
 
-# Move the results to the home folder
-mv /output/[myuser]/background_job/results/* /home/[myuser]/background_job/results/
+# Move the results to the home folder (Temporarily disabled)
+# mv /output/[myuser]/background_job/results/* /home/[myuser]/background_job/results/
 
 # Clean the output folder
 rm -r /output/[myuser]/background_job
