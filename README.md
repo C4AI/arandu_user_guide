@@ -50,10 +50,10 @@ See the guide in:
 After connecting to the VPN, the machines will be accessible via ssh. In a terminal, type:
 
 ```
-ssh myuser@c4aiscm1
+ssh myuser@c4aiscm2
 ```
 
-```c4aiscm1``` is the address of the master node of the cluster.
+```c4aiscm2``` is the address of the master node of the cluster.
 
 ## VSCode Access
 
@@ -101,10 +101,10 @@ Press ```Ctrl+D``` or type exit to quit the interactive job.
 
 This command starts a bash session in one of the available nodes. In case all nodes are busy, Slurm will add this job to the queue.
 
-Notice in the example below that the host machine changes from the master node ```c4aiscm1``` to the worker ```c4aiscw2```.
+Notice in the example below that the host machine changes from the master node ```c4aiscm2``` to the worker ```c4aiscw2```.
 
 ```
-user@c4aiscm1:~$ srun --pty -u bash -i
+user@c4aiscm2:~$ srun --pty -u bash -i
 srun: job 25 queued and waiting for resources
 srun: job 25 has been allocated resources
 user@c4aiscw2:/tmp$
@@ -304,7 +304,7 @@ In this example, we will use Slurm to allocate a GPU in the DGX-A100 and start a
 After connecting to the VPN, open a terminal and type
 
 ```
-ssh myuser@c4aiscm1
+ssh myuser@c4aiscm2
 ```
 
 It will prompt your password, after that, you'll be connected to the master node of the cluster.
